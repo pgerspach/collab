@@ -105,17 +105,48 @@ export default class App extends Component {
     });
   };
   onFileSave = async () => {
-    const response = await fetch("http://127.0.0.1:8000/song/save/", {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        location: this.state.recordingFileLocation,
-      })
-    });
-    console.log(response);
+    const song = {
+      uri: this.state.recordingFileLocation,
+      type: "audio/m4a",
+      name: "audio.m4a"
+    };
+
+    const body = new FormData();
+    body.append("authToken", "secret");
+    body.append("song", song);
+    body.append("title", "Song1");
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "http://127.0.0.1:8000/song/save/");
+    xhr.setRequestHeader("enctype", "multipart/form-data");
+    xhr.onload = function (e) {
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          var json_obj = JSON.parse(xhr.responseText);
+          status = true;
+          console.log(xhr.responseText);
+        } else {
+          console.error(xhr.statusText);
+        }
+      }
+    }.bind(this);
+    xhr.onerror = function (e) {
+      console.error(xhr.statusText);
+    };
+    xhr.send(body);
+
+    // const songFile = await RNFS.readFile(
+    //   this.state.recordingFileLocation,
+    //   "base64"
+    // );
+    // const response = await fetch("http://127.0.0.1:8000/song/save/", {
+    //   method: "POST",
+    //   headers: {
+    //     "Content-Type": "audio/m4a"
+    //   },
+    //   body: songFile
+    // });
+
   };
 
   onPausePlay = async () => {

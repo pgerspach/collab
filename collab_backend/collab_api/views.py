@@ -7,12 +7,16 @@ from django.urls import reverse
 from django.views import generic
 from django.forms.models import model_to_dict
 from django.views.decorators.csrf import csrf_exempt
-import json
+from wsgiref.util import FileWrapper
+from django.core.files import File
+from .forms import UploadFileForm
 
+import json
+import boto3
 import logging
 
 logger = logging.getLogger(__name__)
-
+s3 = boto3.resource('s3')
 @csrf_exempt
 def songs(request, song_id):
     if request.method == 'GET':
@@ -22,7 +26,11 @@ def songs(request, song_id):
         # user hits the Back button.
         return JsonResponse({"song": "everlong"}, safe=False)
     if request.method == 'POST':
-        new_song = Song(location = json.loads(request.body)["location"])
-        new_song.save()
-        return JsonResponse({"status":200, "msg":"Location saved"})
+        for bucket in s3.buckets.all():
+            bname = bucket.name      
+        if request.FILES['song']:
+            s3.Bucket(bucket.name).put_object(Key='audio.m4a', Body=request.FILES['song'])
+            return JsonResponse({"msg":"guud"}, safe=False)
+        else:
+            return JsonResponse({"msg":"not guud"}, safe=False)
     return HttpResponse(404)
