@@ -33,15 +33,23 @@ def save_songs(request):
         for bucket in s3.buckets.all():
             bname = bucket.name
         if request.FILES['song']:
-            upload_song = request.FILES['song']
+            (os_file, track_path) = tempfile.mkstemp(suffix='.wav')
+            track = AudioSegment.from_file(request.FILES['song'], 'm4a').export(
+                track_path, format='wav')  # conver to wav temp file
+            logger.error(track_path)
+
+    # open newly converted wav temporary file
+            wav_song = open(track_path, 'rb')
             song_record = Song.create(user="user1", name="song1")
             logger.error(song_record)
             s3.Bucket(bucket.name).put_object(
-                Key=str(song_record.id)+'.m4a', Body=upload_song)
+                Key=str(song_record.id)+'.wav', Body=wav_song)
+            os.remove(track_path)
             return JsonResponse({"msg": "guud"}, safe=False)
         else:
             return JsonResponse({"msg": "not guud"}, safe=False)
     return HttpResponse(404)
+
 
 def get_songs(request):
     if request.method == 'GET':
@@ -76,13 +84,4 @@ def load_song(request, song_id):
             'Key': key
         }
     )
-    return JsonResponse({"url":url})
-
-def analyze_song(request):
-    (os_file, track_path) = tempfile.mkstemp(suffix='.wav')
-    track = AudioSegment.from_file(request.FILES['song'], 'm4a').export(
-        track_path, format='wav')  # conver to wav temp file
-    logger.error(track_path)
-
-    # open newly converted wav temporary file
-    wav_song = open(track_path, 'rb')
+    return JsonResponse({"url": url})

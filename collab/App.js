@@ -219,7 +219,7 @@ export default class App extends Component {
       // add this option that makes response data to be stored as a file,
       // this is much more performant.
       fileCache: true,
-      appendExt: "m4a",
+      appendExt: "wav",
       session: "temp-session"
     }).fetch("GET", response.url);
     // the temp file path
