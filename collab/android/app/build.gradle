@@ -138,6 +138,8 @@ android {
 }
 
 dependencies {
+    implementation project(':react-native-sound')
+    implementation project(':react-native-fetch-blob')
     implementation project(':react-native-fs')
     implementation project(':react-native-audio-recorder-player')
     implementation project(':react-native-audio')

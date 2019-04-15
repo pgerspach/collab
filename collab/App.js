@@ -1,17 +1,21 @@
 import React, { Component } from "react";
-import { Platform, StyleSheet, Text, View, Image } from "react-native";
+import {
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  FlatList
+} from "react-native";
 import { Header, Card, ListItem, Button, Icon } from "react-native-elements";
-import EmojiDict from "./src/components/EmojiDict";
 import AudioRecorderPlayer from "react-native-audio-recorder-player";
-import * as RNFS from "react-native-fs";
+import Sound from "react-native-sound";
+Sound.setCategory("Playback");
+console.log(Sound.LIBRARY);
+import RNFS from "react-native-fs";
+import RNFetchBlob from "react-native-fetch-blob";
+const base_path = "http://127.0.0.1:8000";
 
-const users = [
-  {
-    name: "Patrick",
-    avatar:
-      "https://media.licdn.com/dms/image/C4E03AQEbbgDztIhSJw/profile-displayphoto-shrink_200_200/0?e=1560384000&v=beta&t=MaLXsBgtpjLaZXyDG03oO5OID0vtk3KouzynBSufGGo"
-  }
-];
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -42,27 +46,30 @@ const styles = StyleSheet.create({
   button: {
     width: 90,
     height: 50
+  },
+  text: {
+    fontSize: 15,
+    color: "#000000"
   }
-});
-const path = Platform.select({
-  ios: "hello.m4a"
 });
 
 export default class App extends Component {
   audioRecorderPlayer = new AudioRecorderPlayer();
-
   state = {
-    fetchResponse: [],
+    fetchResponse: ["Default header!"],
     recordSecs: null,
     recordTime: "0:00",
     currentPositionSec: null,
     currentDurationSec: null,
     playTime: "0",
     duration: null,
-    recordingFileLocation: ""
+    recordingFileLocation: "",
+    mySongs: [],
+    uploadPath: ""
   };
+  currentSound = null;
   onStartRecord = async () => {
-    const result = await this.audioRecorderPlayer.startRecorder(path);
+    const result = await this.audioRecorderPlayer.startRecorder();
     this.audioRecorderPlayer.addRecordBackListener(e => {
       this.setState({
         recordSecs: e.current_position,
@@ -73,8 +80,13 @@ export default class App extends Component {
       return;
     });
     console.log("HI");
-    console.log(result);
-    this.state.recordingFileLocation = result;
+    console.log("../tmp/" + result.split("/").pop());
+    this.setState({
+      recordingFileLocation: "../tmp/" + result.split("/").pop(),
+      uploadPath: result
+    });
+
+    console.log(this.state);
   };
   onStopRecord = async () => {
     const result = await this.audioRecorderPlayer.stopRecorder();
@@ -83,30 +95,58 @@ export default class App extends Component {
       recordSecs: 0
     });
   };
-
   onStartPlay = async () => {
     console.log("onStartPlay");
-    const msg = await this.audioRecorderPlayer.startPlayer(path);
-    console.log(msg);
-    this.audioRecorderPlayer.addPlayBackListener(e => {
-      if (e.current_position === e.duration) {
-        console.log("finished");
-        this.audioRecorderPlayer.stopPlayer();
+    // const msg = await this.audioRecorderPlayer.startPlayer(
+    //   this.state.recordingFileLocation
+    // );
+    // console.log(msg);
+    // this.audioRecorderPlayer.addPlayBackListener(e => {
+    //   if (e.current_position === e.duration) {
+    //     console.log("finished");
+    //     this.audioRecorderPlayer.stopPlayer();
+    //   }
+    //   this.setState({
+    //     currentPositionSec: e.current_position,
+    //     currentDurationSec: e.duration,
+    //     playTime: this.audioRecorderPlayer.mmssss(
+    //       Math.floor(e.current_position)
+    //     ),
+    //     duration: this.audioRecorderPlayer.mmssss(Math.floor(e.duration))
+    //   });
+    //   return;
+    // });
+    this.currentSound = new Sound(
+      this.state.recordingFileLocation,
+      Sound.LIBRARY,
+      error => {
+        if (error) {
+          console.log("failed to load the sound", error);
+          return;
+        }
+        // loaded successfully
+        console.log(
+          "duration in seconds: " +
+            this.currentSound.getDuration() +
+            "number of channels: " +
+            this.currentSound.getNumberOfChannels()
+        );
+
+        // Play the sound with an onEnd callback
+        this.currentSound.play(success => {
+          if (success) {
+            console.log("successfully finished playing");
+            this.currentSound.release();
+          } else {
+            console.log("playback failed due to audio decoding errors");
+          }
+        });
       }
-      this.setState({
-        currentPositionSec: e.current_position,
-        currentDurationSec: e.duration,
-        playTime: this.audioRecorderPlayer.mmssss(
-          Math.floor(e.current_position)
-        ),
-        duration: this.audioRecorderPlayer.mmssss(Math.floor(e.duration))
-      });
-      return;
-    });
+    );
   };
   onFileSave = async () => {
     const song = {
-      uri: this.state.recordingFileLocation,
+      uri: this.state.uploadPath,
       type: "audio/m4a",
       name: "audio.m4a"
     };
@@ -117,9 +157,9 @@ export default class App extends Component {
     body.append("title", "Song1");
 
     var xhr = new XMLHttpRequest();
-    xhr.open("POST", "http://127.0.0.1:8000/song/save/");
+    xhr.open("POST", base_path + "/song/save/");
     xhr.setRequestHeader("enctype", "multipart/form-data");
-    xhr.onload = function (e) {
+    xhr.onload = function(e) {
       if (xhr.readyState === 4) {
         if (xhr.status === 200) {
           var json_obj = JSON.parse(xhr.responseText);
@@ -130,27 +170,15 @@ export default class App extends Component {
         }
       }
     }.bind(this);
-    xhr.onerror = function (e) {
+    xhr.onerror = function(e) {
       console.error(xhr.statusText);
     };
     xhr.send(body);
-
-    // const songFile = await RNFS.readFile(
-    //   this.state.recordingFileLocation,
-    //   "base64"
-    // );
-    // const response = await fetch("http://127.0.0.1:8000/song/save/", {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "audio/m4a"
-    //   },
-    //   body: songFile
-    // });
-
   };
 
   onPausePlay = async () => {
     await this.audioRecorderPlayer.pausePlayer();
+    // this.currentSound.pause();
   };
 
   onStopPlay = async () => {
@@ -160,7 +188,7 @@ export default class App extends Component {
   };
   getCollabApiResponse = async function() {
     try {
-      let response = await fetch("http://127.0.0.1:8000/song/anything");
+      let response = await fetch(base_path + "/song/anything");
       let responseJson = await response.json();
       this.setState({
         fetchResponse: this.state.fetchResponse.concat([responseJson.song])
@@ -170,8 +198,53 @@ export default class App extends Component {
       console.error(error);
     }
   };
-  componentDidMount() {
-    this.getCollabApiResponse();
+  onGetSongs = async () => {
+    try {
+      response = await fetch(base_path + "/song/get/");
+      response = await response.json();
+      console.log(response);
+      this.setState({ mySongs: response });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  onSelectSong = async (id, e) => {
+    response = await fetch(base_path + "/song/load/" + id.toString());
+    response = await response.json();
+    if (response.status === 404) {
+      console.log("Something went wrong");
+      return;
+    }
+    let download = await RNFetchBlob.config({
+      // add this option that makes response data to be stored as a file,
+      // this is much more performant.
+      fileCache: true,
+      appendExt: "m4a",
+      session: "temp-session"
+    }).fetch("GET", response.url);
+    // the temp file path
+    console.log(response.url);
+    console.log(
+      "The file saved to ",
+      "../Documents/RNFetchBlob_tmp/" +
+        download
+          .path()
+          .split("/")
+          .pop()
+    );
+    this.setState({
+      recordingFileLocation:
+        "../Documents/RNFetchBlob_tmp/" +
+        download
+          .path()
+          .split("/")
+          .pop()
+    });
+  };
+  componentDidMount() {}
+  componentWillUnmount() {
+    RNFetchBlob.session("temp-session").dispose();
+    console.log("Removing all files");
   }
   render() {
     return (
@@ -182,27 +255,9 @@ export default class App extends Component {
             justifyContent: "space-between"
           }}
           leftComponent={{ icon: "menu", color: "#fff" }}
-          centerComponent={{ text: "MY TITLE", style: { color: "#fff" } }}
+          centerComponent={{ text: "Collab", style: { color: "#fff" } }}
           rightComponent={{ icon: "home", color: "#fff" }}
         />
-
-        <EmojiDict />
-        <Card title={"CARD WITH DIVIDER"}>
-          {users.map((u, i) => {
-            return (
-              <View key={i} style={styles.user}>
-                <Image
-                  style={styles.image}
-                  resizeMode="cover"
-                  source={{ uri: u.avatar }}
-                />
-                {this.state.fetchResponse.slice(0).map(x => (
-                  <Text>{x}</Text>
-                ))}
-              </View>
-            );
-          })}
-        </Card>
         <Card title={this.state.recordTime}>
           <View style={styles.buttonContainer}>
             <Button
@@ -242,6 +297,26 @@ export default class App extends Component {
               onPress={this.onFileSave}
             />
           </View>
+        </Card>
+        <Card title="Get songs">
+          <View style={styles.buttonContainer}>
+            <Button
+              style={styles.button}
+              icon={<Icon type="evilicon" name="down" />}
+              onPress={this.onGetSongs}
+            />
+          </View>
+          <FlatList
+            data={this.state.mySongs}
+            renderItem={({ item }) => (
+              <Text
+                onPress={this.onSelectSong.bind(this, item.id)}
+                style={styles.text}
+              >
+                {item.id}
+              </Text>
+            )}
+          />
         </Card>
       </View>
     );
