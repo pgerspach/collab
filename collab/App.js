@@ -57,7 +57,6 @@ export default class App extends Component {
   constructor() {
     super();
     this.state = {
-      fetchResponse: ["Default header!"],
       recordSecs: null,
       recordTime: "0:00",
       currentPositionSec: null,
@@ -66,7 +65,8 @@ export default class App extends Component {
       duration: null,
       recordingFileLocation: "",
       mySongs: [],
-      uploadPath: ""
+      uploadPath: "",
+      playing: false
     };
     this.currentSound = null;
     this.audioRecorderPlayer = new AudioRecorderPlayer();
@@ -98,44 +98,46 @@ export default class App extends Component {
     this.setState({
       recordSecs: 0
     });
+    this.loadSound();
   };
-  onStartPlay = async () => {
-    console.log("onStartPlay");
-    this.currentSound = new Sound(
-      this.state.recordingFileLocation,
-      Sound.LIBRARY,
-      error => {
-        if (error) {
-          console.log("failed to load the sound", error);
-          return;
-        }
-        // loaded successfully
-        console.log(
-          "duration in seconds: " +
-            this.currentSound.getDuration() +
-            "number of channels: " +
-            this.currentSound.getNumberOfChannels()
-        );
-
-        // Play the sound with an onEnd callback
-        this.currentPlayTimeInterval = setInterval(() => {
-          this.currentSound.getCurrentTime(seconds => {
-            this.setState({ playTime: seconds });
-            return;
-          });
-        }, 100);
-        this.currentSound.play(success => {
-          if (success) {
-            console.log("successfully finished playing");
-            this.setState({playTime:0});
-            this.currentSound.release();
-            clearInterval(this.currentPlayTimeInterval);
-          } else {
-            console.log("playback failed due to audio decoding errors");
-          }
-        });
+  loadSound = async () => {
+    try {
+      this.currentSound = new Sound(
+        this.state.recordingFileLocation,
+        Sound.LIBRARY,
+        null
+      );
+    } catch (error) {
+      if (error) {
+        console.log("failed to load the sound", error);
+        return;
       }
+    }
+  };
+  playSound = async () => {
+    this.setState({ playing: true });
+    console.log(
+      "duration in seconds: " +
+        this.currentSound.getDuration() +
+        " number of channels: " +
+        this.currentSound.getNumberOfChannels()
     );
+
+    // Play the sound with an onEnd callback
+    this.currentPlayTimeInterval = setInterval(() => {
+      this.currentSound.getCurrentTime(seconds => {
+        this.setState({ playTime: seconds });
+        return;
+      });
+    }, 100);
+    this.currentSound.play(success => {
+      if (success) {
+        this.setState({ playTime: 0, playing: false });
+        clearInterval(this.currentPlayTimeInterval);
+      } else {
+        console.log("playback failed due to audio decoding errors");
+      }
+    });
   };
   onFileSave = async () => {
     const song = {
@@ -169,9 +171,10 @@ export default class App extends Component {
     xhr.send(body);
   };
 
-  onPausePlay = async () => {
-    await this.audioRecorderPlayer.pausePlayer();
-    // this.currentSound.pause();
+  pauseSound = async () => {
+    this.setState({ playing: false });
+    clearInterval(this.currentPlayTimeInterval);
+    this.currentSound.pause();
   };
 
   onStopPlay = async () => {
@@ -179,18 +182,7 @@ export default class App extends Component {
     this.audioRecorderPlayer.stopPlayer();
     this.audioRecorderPlayer.removePlayBackListener();
   };
-  getCollabApiResponse = async function() {
-    try {
-      let response = await fetch(base_path + "/song/anything");
-      let responseJson = await response.json();
-      this.setState({
-        fetchResponse: this.state.fetchResponse.concat([responseJson.song])
-      });
-      return;
-    } catch (error) {
-      console.error(error);
-    }
-  };
+
   onGetSongs = async () => {
     try {
       response = await fetch(base_path + "/song/get/");
@@ -232,6 +224,8 @@ export default class App extends Component {
           .path()
           .split("/")
           .pop()
+    }, ()=>{
+      this.loadSound();
     });
   };
   onDeleteSong = async (id, e) => {
@@ -244,14 +238,22 @@ export default class App extends Component {
     response = await response.json();
     console.log(response);
   };
-  getAudioTimeString(seconds){
-    const h = parseInt(seconds/(60*60));
-    const m = parseInt(seconds%(60*60)/60);
-    const s = parseInt(seconds%60);
-    const ms = parseInt(Math.floor(seconds*100%100));
+  getAudioTimeString(seconds) {
+    const h = parseInt(seconds / (60 * 60));
+    const m = parseInt((seconds % (60 * 60)) / 60);
+    const s = parseInt(seconds % 60);
+    const ms = parseInt(Math.floor((seconds * 100) % 100));
 
-    return ((h<10?'0'+h:h) + ':' + (m<10?'0'+m:m) + ':' + (s<10?'0'+s:s)+ ':' + (ms<10?'0'+ms:ms));
-}
+    return (
+      (h < 10 ? "0" + h : h) +
+      ":" +
+      (m < 10 ? "0" + m : m) +
+      ":" +
+      (s < 10 ? "0" + s : s) +
+      ":" +
+      (ms < 10 ? "0" + ms : ms)
+    );
+  }
   componentWillUnmount() {
     RNFetchBlob.session("temp-session").dispose();
     console.log("Removing all files");
@@ -291,7 +293,7 @@ export default class App extends Component {
             <Button
               style={styles.button}
               icon={<Icon type="evilicon" name="play" />}
-              onPress={this.onStartPlay}
+              onPress={this.state.playing?this.pauseSound:this.playSound}
             />
             <Button
               style={styles.button}
