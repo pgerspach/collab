@@ -12,7 +12,7 @@ import AudioRecorderPlayer from "react-native-audio-recorder-player";
 import Sound from "react-native-sound";
 Sound.setCategory("Playback");
 console.log(Sound.LIBRARY);
-import RNFS from "react-native-fs";
+// import RNFS from "react-native-fs";
 import RNFetchBlob from "react-native-fetch-blob";
 const base_path = "http://127.0.0.1:8000";
 
@@ -54,20 +54,26 @@ const styles = StyleSheet.create({
 });
 
 export default class App extends Component {
-  audioRecorderPlayer = new AudioRecorderPlayer();
-  state = {
-    fetchResponse: ["Default header!"],
-    recordSecs: null,
-    recordTime: "0:00",
-    currentPositionSec: null,
-    currentDurationSec: null,
-    playTime: "0",
-    duration: null,
-    recordingFileLocation: "",
-    mySongs: [],
-    uploadPath: ""
-  };
-  currentSound = null;
+  constructor() {
+    super();
+    this.state = {
+      fetchResponse: ["Default header!"],
+      recordSecs: null,
+      recordTime: "0:00",
+      currentPositionSec: null,
+      currentDurationSec: null,
+      playTime: 0,
+      duration: null,
+      recordingFileLocation: "",
+      mySongs: [],
+      uploadPath: ""
+    };
+    this.currentSound = null;
+    this.audioRecorderPlayer = new AudioRecorderPlayer();
+  }
+  componentDidMount() {
+    RNFetchBlob.session("temp-session").dispose();
+  }
   onStartRecord = async () => {
     const result = await this.audioRecorderPlayer.startRecorder();
     this.audioRecorderPlayer.addRecordBackListener(e => {
@@ -79,8 +85,6 @@ export default class App extends Component {
       });
       return;
     });
-    console.log("HI");
-    console.log("../tmp/" + result.split("/").pop());
     this.setState({
       recordingFileLocation: "../tmp/" + result.split("/").pop(),
       uploadPath: result
@@ -97,25 +101,6 @@ export default class App extends Component {
   };
   onStartPlay = async () => {
     console.log("onStartPlay");
-    // const msg = await this.audioRecorderPlayer.startPlayer(
-    //   this.state.recordingFileLocation
-    // );
-    // console.log(msg);
-    // this.audioRecorderPlayer.addPlayBackListener(e => {
-    //   if (e.current_position === e.duration) {
-    //     console.log("finished");
-    //     this.audioRecorderPlayer.stopPlayer();
-    //   }
-    //   this.setState({
-    //     currentPositionSec: e.current_position,
-    //     currentDurationSec: e.duration,
-    //     playTime: this.audioRecorderPlayer.mmssss(
-    //       Math.floor(e.current_position)
-    //     ),
-    //     duration: this.audioRecorderPlayer.mmssss(Math.floor(e.duration))
-    //   });
-    //   return;
-    // });
     this.currentSound = new Sound(
       this.state.recordingFileLocation,
       Sound.LIBRARY,
@@ -133,10 +118,18 @@ export default class App extends Component {
         );
 
         // Play the sound with an onEnd callback
+        this.currentPlayTimeInterval = setInterval(() => {
+          this.currentSound.getCurrentTime(seconds => {
+            this.setState({ playTime: seconds });
+            return;
+          });
+        }, 100);
         this.currentSound.play(success => {
           if (success) {
             console.log("successfully finished playing");
+            this.setState({playTime:0});
             this.currentSound.release();
+            clearInterval(this.currentPlayTimeInterval);
           } else {
             console.log("playback failed due to audio decoding errors");
           }
@@ -241,7 +234,24 @@ export default class App extends Component {
           .pop()
     });
   };
-  componentDidMount() {}
+  onDeleteSong = async (id, e) => {
+    response = await fetch(base_path + "/song/delete/" + id.toString());
+    response = await response.json();
+    console.log(response.msg);
+  };
+  onAnalyzeSong = async (id, e) => {
+    response = await fetch(base_path + "/song/analyze/" + id.toString());
+    response = await response.json();
+    console.log(response);
+  };
+  getAudioTimeString(seconds){
+    const h = parseInt(seconds/(60*60));
+    const m = parseInt(seconds%(60*60)/60);
+    const s = parseInt(seconds%60);
+    const ms = parseInt(Math.floor(seconds*100%100));
+
+    return ((h<10?'0'+h:h) + ':' + (m<10?'0'+m:m) + ':' + (s<10?'0'+s:s)+ ':' + (ms<10?'0'+ms:ms));
+}
   componentWillUnmount() {
     RNFetchBlob.session("temp-session").dispose();
     console.log("Removing all files");
@@ -272,7 +282,7 @@ export default class App extends Component {
             />
           </View>
         </Card>
-        <Card title={this.state.playTime}>
+        <Card title={this.getAudioTimeString(this.state.playTime)}>
           <View style={styles.buttonContainer}>
             <Button
               style={styles.button}
@@ -289,11 +299,11 @@ export default class App extends Component {
             />
           </View>
         </Card>
-        <Card title={this.state.playTime}>
+        <Card title={this.getAudioTimeString(this.state.playTime)}>
           <View style={styles.buttonContainer}>
             <Button
               style={styles.button}
-              icon={<Icon type="evilicon" name="save" />}
+              icon={<Icon type="evilicon" name="arrow-up" />}
               onPress={this.onFileSave}
             />
           </View>
@@ -302,19 +312,33 @@ export default class App extends Component {
           <View style={styles.buttonContainer}>
             <Button
               style={styles.button}
-              icon={<Icon type="evilicon" name="down" />}
+              icon={<Icon type="evilicon" name="arrow-down" />}
               onPress={this.onGetSongs}
             />
           </View>
           <FlatList
             data={this.state.mySongs}
             renderItem={({ item }) => (
-              <Text
-                onPress={this.onSelectSong.bind(this, item.id)}
-                style={styles.text}
-              >
-                {item.id}
-              </Text>
+              <View style={styles.buttonContainer}>
+                <Text
+                  onPress={this.onSelectSong.bind(this, item.id)}
+                  style={styles.text}
+                >
+                  Load: {item.id}
+                </Text>
+                <Text
+                  onPress={this.onDeleteSong.bind(this, item.id)}
+                  style={styles.text}
+                >
+                  Delete: {item.id}
+                </Text>
+                <Text
+                  onPress={this.onAnalyzeSong.bind(this, item.id)}
+                  style={styles.text}
+                >
+                  Analyze: {item.id}
+                </Text>
+              </View>
             )}
           />
         </Card>

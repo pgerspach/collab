@@ -11,6 +11,7 @@ from wsgiref.util import FileWrapper
 from django.core.files import File
 from .forms import UploadFileForm
 from pydub import AudioSegment
+import librosa
 import json
 import boto3
 from botocore.client import Config
@@ -35,10 +36,10 @@ def save_songs(request):
         if request.FILES['song']:
             (os_file, track_path) = tempfile.mkstemp(suffix='.wav')
             track = AudioSegment.from_file(request.FILES['song'], 'm4a').export(
-                track_path, format='wav')  # conver to wav temp file
+                track_path, format='wav')  # convert to wav temp file
             logger.error(track_path)
 
-    # open newly converted wav temporary file
+            # open newly converted wav temporary file
             wav_song = open(track_path, 'rb')
             song_record = Song.create(user="user1", name="song1")
             logger.error(song_record)
@@ -85,3 +86,67 @@ def load_song(request, song_id):
         }
     )
     return JsonResponse({"url": url})
+
+
+def delete_song(request, song_id):
+    if request.method == 'POST':
+        # songs = list(Songs.objects.filter(song=song_id).values())
+        # Always return an HttpResponseRedirect after successfully dealing
+        # with POST data. This prevents data from being posted twice if a
+        # user hits the Back button.
+        return HttpResponse(404)
+    bucket_name = 'collab-song-storage'
+    song = Song.objects.get(pk=song_id)
+    key = str(song.id)+'.wav'
+    song.delete()
+    logger.error(key)
+
+    url = s3_client.delete_object(
+        Bucket='collab-song-storage',
+        Key=key
+    )
+    return JsonResponse({"msg": "File deleted"})
+
+
+def analyze_song(request, song_id):
+    if request.method == 'POST':
+        # songs = list(Songs.objects.filter(song=song_id).values())
+        # Always return an HttpResponseRedirect after successfully dealing
+        # with POST data. This prevents data from being posted twice if a
+        # user hits the Back button.
+        return HttpResponse(404)
+    (os_file, track_path) = tempfile.mkstemp(suffix='.wav')
+    bucket_name = 'collab-song-storage'
+    song = Song.objects.get(pk=song_id)
+    key = str(song.id)+'.wav'
+    logger.error(key)
+    try:
+        s3.Bucket('collab-song-storage').download_file(key, track_path)
+    except:
+        logger.error('Something went wrong trying to download the file')
+        return JsonResponse({'msg': 'Oops'})
+    else:
+        logger.error('Successfully downloaded file from AWS')
+    y, sr = librosa.load(track_path, mono=False)
+    # CONVERT TO MONO AND REUPLOAD TO CLOUD
+    y_mono = librosa.to_mono(y)
+    # librosa.output.write_wav(track_path, y_mono, sr)
+    # open_song = open(track_path, 'rb')
+    # s3.Bucket('collab-song-storage').put_object(
+    #     Key=key, Body=open_song)
+    ##################
+    # ESTIMATE TEMPO
+    onset_env = librosa.onset.onset_strength(y=y_mono, sr=sr)
+    tempo = list(librosa.beat.tempo(onset_envelope=onset_env, sr=sr))
+    if tempo[0]>160:
+        tempo.append(tempo[0]/2)
+    elif tempo[0]<70:
+        tempo.append(tempo[0]*2)
+    ##################
+    try:
+        os.remove(track_path)
+    except:
+        logger.error('Could not delete server file downloaded from AWS')
+    else:
+        logger.error('Downloaded file deleted from server files')
+    return JsonResponse({"msg": "Completed analyze song", "tempo": tempo})
