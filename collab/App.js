@@ -5,14 +5,15 @@ import {
   Text,
   View,
   Image,
-  FlatList
+  FlatList,
+  ScrollView
 } from "react-native";
 import { Header, Card, ListItem, Button, Icon } from "react-native-elements";
 import AudioRecorderPlayer from "react-native-audio-recorder-player";
 import Sound from "react-native-sound";
 Sound.setCategory("Playback");
 console.log(Sound.LIBRARY);
-// import RNFS from "react-native-fs";
+import RNFS from "react-native-fs";
 import RNFetchBlob from "react-native-fetch-blob";
 const base_path = "http://127.0.0.1:8000";
 
@@ -40,7 +41,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: "row",
     width: 300,
-    justifyContent: "space-between",
+    justifyContent: "space-around",
     alignSelf: "center"
   },
   button: {
@@ -66,7 +67,8 @@ export default class App extends Component {
       recordingFileLocation: "",
       mySongs: [],
       uploadPath: "",
-      playing: false
+      playing: false,
+      song_analysis: null
     };
     this.currentSound = null;
     this.audioRecorderPlayer = new AudioRecorderPlayer();
@@ -177,12 +179,6 @@ export default class App extends Component {
     this.currentSound.pause();
   };
 
-  onStopPlay = async () => {
-    console.log("onStopPlay");
-    this.audioRecorderPlayer.stopPlayer();
-    this.audioRecorderPlayer.removePlayBackListener();
-  };
-
   onGetSongs = async () => {
     try {
       response = await fetch(base_path + "/song/get/");
@@ -217,16 +213,26 @@ export default class App extends Component {
           .split("/")
           .pop()
     );
-    this.setState({
-      recordingFileLocation:
-        "../Documents/RNFetchBlob_tmp/" +
-        download
-          .path()
-          .split("/")
-          .pop()
-    }, ()=>{
-      this.loadSound();
-    });
+    if (this.state.recordingFileLocation.length > 0) {
+      const path =
+        RNFS.DocumentDirectoryPath + "/" + this.state.recordingFileLocation;
+      RNFS.unlink(path).then(() => {
+        console.log("previously loaded file deleted");
+      });
+    }
+    this.setState(
+      {
+        recordingFileLocation:
+          "../Documents/RNFetchBlob_tmp/" +
+          download
+            .path()
+            .split("/")
+            .pop()
+      },
+      () => {
+        this.loadSound();
+      }
+    );
   };
   onDeleteSong = async (id, e) => {
     response = await fetch(base_path + "/song/delete/" + id.toString());
@@ -236,17 +242,23 @@ export default class App extends Component {
   onAnalyzeSong = async (id, e) => {
     response = await fetch(base_path + "/song/analyze/" + id.toString());
     response = await response.json();
+    this.setState({
+      song_analysis: {
+        tempo: response.tempo,
+        frequencies: response.common_frequencies
+      }
+    });
     console.log(response);
   };
   getAudioTimeString(seconds) {
-    const h = parseInt(seconds / (60 * 60));
+    // const h = parseInt(seconds / (60 * 60));
     const m = parseInt((seconds % (60 * 60)) / 60);
     const s = parseInt(seconds % 60);
     const ms = parseInt(Math.floor((seconds * 100) % 100));
 
     return (
-      (h < 10 ? "0" + h : h) +
-      ":" +
+      // (h < 10 ? "0" + h : h) +
+      // ":" +
       (m < 10 ? "0" + m : m) +
       ":" +
       (s < 10 ? "0" + s : s) +
@@ -255,8 +267,13 @@ export default class App extends Component {
     );
   }
   componentWillUnmount() {
-    RNFetchBlob.session("temp-session").dispose();
-    console.log("Removing all files");
+    if (this.state.recordingFileLocation.length > 0) {
+      const path =
+        RNFS.DocumentDirectoryPath + "/" + this.state.recordingFileLocation;
+      RNFS.unlink(path).then(() => {
+        console.log("previously loaded file deleted");
+      });
+    }
   }
   render() {
     return (
@@ -270,80 +287,105 @@ export default class App extends Component {
           centerComponent={{ text: "Collab", style: { color: "#fff" } }}
           rightComponent={{ icon: "home", color: "#fff" }}
         />
-        <Card title={this.state.recordTime}>
-          <View style={styles.buttonContainer}>
-            <Button
-              style={styles.button}
-              icon={<Icon type="entypo" name="mic" />}
-              onPress={this.onStartRecord}
+        <ScrollView>
+          <Card title={this.state.recordTime}>
+            <View style={styles.buttonContainer}>
+              <Button
+                style={styles.button}
+                icon={<Icon type="entypo" name="mic" />}
+                onPress={this.onStartRecord}
+              />
+              <Button
+                style={styles.button}
+                icon={<Icon type="foundation" name="stop" />}
+                onPress={this.onStopRecord}
+              />
+            </View>
+          </Card>
+          <Card title={this.getAudioTimeString(this.state.playTime)}>
+            <View style={styles.buttonContainer}>
+              <Button
+                style={styles.button}
+                icon={<Icon type="material" name="replay-10" />}
+              />
+              <Button
+                style={styles.button}
+                icon={
+                  <Icon
+                    type="material"
+                    name={this.state.playing ? "pause" : "play-arrow"}
+                  />
+                }
+                onPress={this.state.playing ? this.pauseSound : this.playSound}
+              />
+              <Button
+                style={styles.button}
+                icon={<Icon type="material" name="forward-10" />}
+              />
+            </View>
+          </Card>
+          <Card title="Save clip to cloud">
+            <View style={styles.buttonContainer}>
+              <Button
+                style={styles.button}
+                icon={<Icon type="material" name="cloud-upload" />}
+                onPress={this.onFileSave}
+              />
+            </View>
+          </Card>
+          <Card title="Get saved songs">
+            <View style={styles.buttonContainer}>
+              <Button
+                style={styles.button}
+                icon={<Icon type="material" name="cloud-download" />}
+                onPress={this.onGetSongs}
+              />
+            </View>
+            <FlatList
+              data={this.state.mySongs}
+              renderItem={({ item }) => (
+                <View style={styles.buttonContainer}>
+                  <Text
+                    onPress={this.onSelectSong.bind(this, item.id)}
+                    style={styles.text}
+                  >
+                    Load: {item.id}
+                  </Text>
+                  <Text
+                    onPress={this.onDeleteSong.bind(this, item.id)}
+                    style={styles.text}
+                  >
+                    Delete: {item.id}
+                  </Text>
+                  <Text
+                    onPress={this.onAnalyzeSong.bind(this, item.id)}
+                    style={styles.text}
+                  >
+                    Analyze: {item.id}
+                  </Text>
+                </View>
+              )}
             />
-            <Button
-              style={styles.button}
-              icon={<Icon type="foundation" name="stop" />}
-              onPress={this.onStopRecord}
+          </Card>
+          <Card title="Song Analysis">
+            <Text style={styles.text}>
+              Tempo:{" "}
+              {this.state.song_analysis ? this.state.song_analysis.tempo : null}
+            </Text>
+            <Text style={styles.text}>Frequencies:</Text>
+            <FlatList
+              data={
+                this.state.song_analysis
+                  ? this.state.song_analysis.frequencies
+                  : []
+              }
+              renderItem={({item})=> {
+                console.log(item);
+                return <Text style={styles.text}>{item}</Text>;
+              }}
             />
-          </View>
-        </Card>
-        <Card title={this.getAudioTimeString(this.state.playTime)}>
-          <View style={styles.buttonContainer}>
-            <Button
-              style={styles.button}
-              icon={<Icon type="evilicon" name="arrow-left" />}
-            />
-            <Button
-              style={styles.button}
-              icon={<Icon type="evilicon" name="play" />}
-              onPress={this.state.playing?this.pauseSound:this.playSound}
-            />
-            <Button
-              style={styles.button}
-              icon={<Icon type="evilicon" name="arrow-right" />}
-            />
-          </View>
-        </Card>
-        <Card title={this.getAudioTimeString(this.state.playTime)}>
-          <View style={styles.buttonContainer}>
-            <Button
-              style={styles.button}
-              icon={<Icon type="evilicon" name="arrow-up" />}
-              onPress={this.onFileSave}
-            />
-          </View>
-        </Card>
-        <Card title="Get songs">
-          <View style={styles.buttonContainer}>
-            <Button
-              style={styles.button}
-              icon={<Icon type="evilicon" name="arrow-down" />}
-              onPress={this.onGetSongs}
-            />
-          </View>
-          <FlatList
-            data={this.state.mySongs}
-            renderItem={({ item }) => (
-              <View style={styles.buttonContainer}>
-                <Text
-                  onPress={this.onSelectSong.bind(this, item.id)}
-                  style={styles.text}
-                >
-                  Load: {item.id}
-                </Text>
-                <Text
-                  onPress={this.onDeleteSong.bind(this, item.id)}
-                  style={styles.text}
-                >
-                  Delete: {item.id}
-                </Text>
-                <Text
-                  onPress={this.onAnalyzeSong.bind(this, item.id)}
-                  style={styles.text}
-                >
-                  Analyze: {item.id}
-                </Text>
-              </View>
-            )}
-          />
-        </Card>
+          </Card>
+        </ScrollView>
       </View>
     );
   }

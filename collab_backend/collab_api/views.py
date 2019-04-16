@@ -16,6 +16,7 @@ import json
 import boto3
 from botocore.client import Config
 import logging
+import numpy as np
 import asyncio
 import tempfile
 import os
@@ -126,7 +127,7 @@ def analyze_song(request, song_id):
         logger.error('Something went wrong trying to download the file')
         return JsonResponse({'msg': 'Oops'})
     else:
-        logger.error('Successfully downloaded file from AWS')
+        logger.error('Successfully downloaded file from AWS to '+track_path)
     y, sr = librosa.load(track_path, mono=False)
     # CONVERT TO MONO AND REUPLOAD TO CLOUD
     y_mono = librosa.to_mono(y)
@@ -138,6 +139,11 @@ def analyze_song(request, song_id):
     # ESTIMATE TEMPO
     onset_env = librosa.onset.onset_strength(y=y_mono, sr=sr)
     tempo = list(librosa.beat.tempo(onset_envelope=onset_env, sr=sr))
+    try:
+        pitches, magnitudes = librosa.piptrack(y=y_mono, sr=sr)
+
+    except:
+        logger.error('Could not get pitches, magnitudes')
     if tempo[0]>160:
         tempo.append(tempo[0]/2)
     elif tempo[0]<70:
@@ -149,4 +155,14 @@ def analyze_song(request, song_id):
         logger.error('Could not delete server file downloaded from AWS')
     else:
         logger.error('Downloaded file deleted from server files')
-    return JsonResponse({"msg": "Completed analyze song", "tempo": tempo})
+    half_step_mult = [1.05946, 1.12246, 1.18921, 1.25992, 1.33484, 1.41421,1.49831 ,1.5874, 1.68179, 1.78179, 1.88774, 2];
+    freq_by_time = [{'t':y,'f':pitches[x][y], 'm':magnitudes[x][y]} for x in range(len(pitches)) for y in range(len(pitches[x])) if magnitudes[x][y] > .1]
+    freq_by_time.sort(key=lambda x: x['t'])
+    sums = [sum(magnitudes[x]) for x in range(len(magnitudes))]
+    max_indices = []
+    for i in range(5):
+        max_m = np.argmax(sums)
+        max_indices.append(max_m)
+        sums.pop(max_m)
+    most_common_freq = [sum(pitches[max_index])/len(pitches[max_index]) for max_index in max_indices]
+    return JsonResponse({"msg": "Completed analyze song", "tempo": tempo, 'common_frequencies':most_common_freq})
