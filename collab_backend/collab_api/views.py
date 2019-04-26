@@ -165,4 +165,4 @@ def analyze_song(request, song_id):
         max_indices.append(max_m)
         sums.pop(max_m)
     most_common_freq = [sum(pitches[max_index])/len(pitches[max_index]) for max_index in max_indices]
-    return JsonResponse({"msg": "Completed analyze song", "tempo": tempo, 'common_frequencies':most_common_freq})
+    return JsonResponse({"msg": "Completed analyze song", "tempo": list(map(lambda x : round(x, 2), tempo)), 'common_frequencies':list(map(lambda x : round(x, 2), most_common_freq))})
