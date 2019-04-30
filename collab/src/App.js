@@ -1,11 +1,13 @@
 import React, { Component } from "react";
-import Home from "./src/scenes/main/Home";
+import { Provider } from 'react-redux';
+import Home from "./scenes/main/Home";
 import View from "react-native";
+
+
 export default class App extends Component {
   render() {
     return (
         <Home />
-
     );
   }
 }
