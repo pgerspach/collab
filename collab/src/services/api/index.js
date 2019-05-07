@@ -1,6 +1,6 @@
 import fetchival from 'fetchival';
 import _ from 'lodash';
-import * as sessionSelectors from 'MobileApp/src/services/session/selectors';
+import * as sessionSelectors from '../session/selectors';
 import apiConfig from './config';
 
 export const fetchApi = (endPoint, payload = {}, method = 'get', headers = {}) => {
