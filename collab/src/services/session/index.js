@@ -61,7 +61,7 @@ export const accessToken = () => {
 // };
 
 export const authenticate = (email, password) => {
-  api
+  return api
     .authenticate(email, password)
     .then(onRequestSuccess)
     .catch(onRequestFailed);

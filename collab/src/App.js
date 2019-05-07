@@ -2,15 +2,11 @@ import React, { Component } from "react";
 import { Provider } from "react-redux";
 import Home from "./scenes/Home";
 import Login from "./scenes/Login";
-import { View, Navigator } from "react-native";
+import { View, Text } from "react-native";
 import * as session from "./services/session";
 import * as api from "./services/api";
 import store from "./store.js";
-
-const routeStack = [
-  { name: "Login", component: Login },
-  { name: "Home", component: Home }
-];
+import { createStackNavigator, createAppContainer } from "react-navigation";
 
 export default class App extends Component {
   constructor(props) {
@@ -35,29 +31,32 @@ export default class App extends Component {
     session
       .accessToken()
       .then(() => {
-        this.setState({ initialRoute: routeStack[1] });
+        this.setState({ initialRoute: 'Home' });
       })
       .catch(() => {
-        this.setState({ initialRoute: routeStack[0] });
+        this.setState({ initialRoute: 'Login' });
       });
   }
   renderContent(initialRoute) {
     if (!initialRoute) {
-      return <View>Waiting</View>;
+      return (
+        <View>
+          <Text>Waiting</Text>
+        </View>
+      );
     }
-    return (
-      <Navigator
-        initialRoute={initialRoute}
-        initialRouteStack={routeStack}
-        renderScene={(route, navigator) => (
-          <route.component
-            route={route}
-            navigator={navigator}
-            {...route.passProps}
-          />
-        )}
-      />
+    const mainNavigator = createStackNavigator(
+      {
+        Login: Login,
+        Home: Home
+      },
+      {
+        initialRouteName: initialRoute
+      }
     );
+    const MainApp = createAppContainer(mainNavigator);
+    console.log(MainApp);
+    return <MainApp />;
   }
   render() {
     return (

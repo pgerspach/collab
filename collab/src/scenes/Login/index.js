@@ -29,9 +29,19 @@ export default class Login extends Component {
   logIn() {
     session
       .authenticate(this.state.username, this.state.password)
-      .then()
+      .then(() => {
+        this.setState(this.initialState);
+        this.props.navigation.navigate('Home')
+      })
       .catch(err => {
         console.log(err);
       });
+  }
+  render(){
+      return(<View>
+          <Text>
+              Logging in
+          </Text>
+      </View>)
   }
 }
