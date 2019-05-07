@@ -5,20 +5,20 @@ import * as selectors from "./selectors";
 import * as actionCreators from "./actions";
 import { initialState } from "./reducer";
 
-const SESSION_TIMEOUT_THRESHOLD = 300; // Will refresh the access token 5 minutes before it expires
+// const SESSION_TIMEOUT_THRESHOLD = 300; // Will refresh the access token 5 minutes before it expires // Not using refresh tokens
 
-let sessionTimeout = null;
+// let sessionTimeout = null; // Not using refresh tokens
 
-const setSessionTimeout = duration => {
-  clearTimeout(sessionTimeout);
-  sessionTimeout = setTimeout(
-    refreshToken, // eslint-disable-line no-use-before-define
-    (duration - SESSION_TIMEOUT_THRESHOLD) * 1000
-  );
-};
+// const setSessionTimeout = duration => { // Not using refresh tokens
+//   clearTimeout(sessionTimeout);
+//   sessionTimeout = setTimeout(
+//     refreshToken, // eslint-disable-line no-use-before-define
+//     (duration - SESSION_TIMEOUT_THRESHOLD) * 1000
+//   );
+// };
 
 const clearSession = () => {
-  clearTimeout(sessionTimeout);
+  // clearTimeout(sessionTimeout); // Not using refresh tokens
   store.dispatch(actionCreators.update(initialState));
 };
 
@@ -31,32 +31,41 @@ const onRequestSuccess = response => {
     {}
   );
   store.dispatch(actionCreators.update({ tokens, user: response.user }));
-  setSessionTimeout(tokens.access.expiresIn);
+  // setSessionTimeout(tokens.access.expiresIn); // Not using refresh tokens
 };
 
 const onRequestFailed = exception => {
   clearSession();
   throw exception;
 };
-
-export const refreshToken = () => {
+export const accessToken = () => {
   const session = selectors.get();
-
-  if (!session.tokens.refresh.value || !session.user.id) {
-    return Promise.reject();
-  }
+  if (!session.tokens.access.value || !session.user.id) return Promise.reject();
 
   return api
-    .refresh(session.tokens.refresh, session.user)
-    .then(onRequestSuccess)
+    .checkAccess(session.tokens.access, session.user)
+    .then()
     .catch(onRequestFailed);
 };
+// export const refreshToken = () => { // Not using refresh tokens
+//   const session = selectors.get();
 
-export const authenticate = (email, password) =>
+//   if (!session.tokens.refresh.value || !session.user.id) {
+//     return Promise.reject();
+//   }
+
+//   return api
+//     .refresh(session.tokens.refresh, session.user)
+//     .then(onRequestSuccess)
+//     .catch(onRequestFailed);
+// };
+
+export const authenticate = (email, password) => {
   api
     .authenticate(email, password)
     .then(onRequestSuccess)
     .catch(onRequestFailed);
+};
 
 export const revoke = () => {
   const session = selectors.get();

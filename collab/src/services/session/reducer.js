@@ -1,29 +1,28 @@
-import * as actionTypes from './actionTypes';
+import * as actionTypes from "./actionTypes";
 
 export const initialState = {
-	tokens: {
-		access: {
-			type: null,
-			value: null,
-			expiresIn: null,
-		},
-		refresh: {
-			type: null,
-			value: null,
-		},
-	},
-	user: {
-		id: null,
-	},
+  tokens: {
+    access: {
+      type: null,
+      value: null
+    }
+    // refresh: { // not using refresh tokens
+    // 	type: null,
+    // 	value: null,
+    // },
+  },
+  user: {
+    id: null
+  }
 };
 
 export const reducer = (state = initialState, action) => {
-	switch (action.type) {
-		case actionTypes.UPDATE:
-			return {
-				...action.session,
-			};
-		default:
-			return state;
-	}
+  switch (action.type) {
+    case actionTypes.UPDATE:
+      return {
+        ...action.session
+      };
+    default:
+      return state;
+  }
 };

@@ -5,6 +5,16 @@ from django.forms.models import model_to_dict
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
+from rest_framework.authtoken.models import Token
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.status import (
+    HTTP_400_BAD_REQUEST,
+    HTTP_404_NOT_FOUND,
+    HTTP_200_OK
+)
+from rest_framework.response import Response
+
 from pydub import AudioSegment
 import librosa
 import json
@@ -141,9 +151,9 @@ def analyze_song(request, song_id):
 
     except:
         logger.error('Could not get pitches, magnitudes')
-    if tempo[0]>160:
+    if tempo[0] > 160:
         tempo.append(tempo[0]/2)
-    elif tempo[0]<70:
+    elif tempo[0] < 70:
         tempo.append(tempo[0]*2)
     ##################
     try:
@@ -152,8 +162,10 @@ def analyze_song(request, song_id):
         logger.error('Could not delete server file downloaded from AWS')
     else:
         logger.error('Downloaded file deleted from server files')
-    half_step_mult = [1.05946, 1.12246, 1.18921, 1.25992, 1.33484, 1.41421,1.49831 ,1.5874, 1.68179, 1.78179, 1.88774, 2];
-    freq_by_time = [{'t':y,'f':pitches[x][y], 'm':magnitudes[x][y]} for x in range(len(pitches)) for y in range(len(pitches[x])) if magnitudes[x][y] > .1]
+    half_step_mult = [1.05946, 1.12246, 1.18921, 1.25992, 1.33484,
+                      1.41421, 1.49831, 1.5874, 1.68179, 1.78179, 1.88774, 2]
+    freq_by_time = [{'t': y, 'f': pitches[x][y], 'm':magnitudes[x][y]} for x in range(
+        len(pitches)) for y in range(len(pitches[x])) if magnitudes[x][y] > .1]
     freq_by_time.sort(key=lambda x: x['t'])
     sums = [sum(magnitudes[x]) for x in range(len(magnitudes))]
     max_indices = []
@@ -161,19 +173,32 @@ def analyze_song(request, song_id):
         max_m = np.argmax(sums)
         max_indices.append(max_m)
         sums.pop(max_m)
-    most_common_freq = [sum(pitches[max_index])/len(pitches[max_index]) for max_index in max_indices]
-    return JsonResponse({"msg": "Completed analyze song", "tempo": list(map(lambda x : round(x, 2), tempo)), 'common_frequencies':list(map(lambda x : round(x, 2), most_common_freq))})
+    most_common_freq = [sum(pitches[max_index])/len(pitches[max_index])
+                        for max_index in max_indices]
+    return JsonResponse({"msg": "Completed analyze song", "tempo": list(map(lambda x: round(x, 2), tempo)), 'common_frequencies': list(map(lambda x: round(x, 2), most_common_freq))})
+
 
 @csrf_exempt
+@api_view(["POST"])
+@permission_classes((AllowAny,))
 def handle_login(request):
     auth = request.META['HTTP_AUTHORIZATION'].split()
     if auth[0].lower() == "basic":
-        uname,pwd= base64.b64decode(auth[1]).decode().split(':')
-        user = User.objects.create_user(uname,uname,pwd)
-        user.save()
-        logger.error(user)
-    return JsonResponse({'msg':'Gotchu'})
+        username, password = base64.b64decode(auth[1]).decode().split(':')
+        user = authenticate(username=username, password=password)
+        if not user:
+            return Response({'error': 'Invalid Credentials'}, status=HTTP_404_NOT_FOUND)
+        token, _ = Token.objects.get_or_create(user=user)
+        logger.error(token)
+        return Response({'tokens': [{'type': 'access', 'value': token.key}], 'user': {'id': user.pk, 'username': user.username}}, status=HTTP_200_OK)
+
 
 @csrf_exempt
 def handle_registration(request):
     pass
+
+
+@csrf_exempt
+@api_view(["GET"])
+def arb_api_call(request):
+    return Response({'message': 'success'}, status=HTTP_200_OK)
