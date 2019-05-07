@@ -52,12 +52,11 @@ export const refreshToken = () => {
     .catch(onRequestFailed);
 };
 
-export const authenticate = (email, password) => {
+export const authenticate = (email, password) =>
   api
     .authenticate(email, password)
     .then(onRequestSuccess)
     .catch(onRequestFailed);
-};
 
 export const revoke = () => {
   const session = selectors.get();

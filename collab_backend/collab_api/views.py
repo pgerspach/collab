@@ -110,6 +110,7 @@ def delete_song(request, song_id):
 
 
 def analyze_song(request, song_id):
+
     if request.method == 'POST':
         # songs = list(Songs.objects.filter(song=song_id).values())
         # Always return an HttpResponseRedirect after successfully dealing
@@ -166,3 +167,8 @@ def analyze_song(request, song_id):
         sums.pop(max_m)
     most_common_freq = [sum(pitches[max_index])/len(pitches[max_index]) for max_index in max_indices]
     return JsonResponse({"msg": "Completed analyze song", "tempo": list(map(lambda x : round(x, 2), tempo)), 'common_frequencies':list(map(lambda x : round(x, 2), most_common_freq))})
+
+@csrf_exempt
+def handle_login(request):
+    logger.error(request.body)
+    return JsonResponse({'msg':'Gotchu'})
