@@ -1,15 +1,10 @@
 from .models import Song
-from django.template import loader
 from django.db.models import F
-from django.shortcuts import get_object_or_404, render
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
-from django.urls import reverse
-from django.views import generic
 from django.forms.models import model_to_dict
 from django.views.decorators.csrf import csrf_exempt
-from wsgiref.util import FileWrapper
-from django.core.files import File
-from .forms import UploadFileForm
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.models import User
 from pydub import AudioSegment
 import librosa
 import json
@@ -17,9 +12,10 @@ import boto3
 from botocore.client import Config
 import logging
 import numpy as np
-import asyncio
 import tempfile
 import os
+import base64
+
 logger = logging.getLogger(__name__)
 s3 = boto3.resource('s3')
 s3_client = boto3.client('s3', config=Config(signature_version='s3v4'))
@@ -170,5 +166,14 @@ def analyze_song(request, song_id):
 
 @csrf_exempt
 def handle_login(request):
-    logger.error(request.body)
+    auth = request.META['HTTP_AUTHORIZATION'].split()
+    if auth[0].lower() == "basic":
+        uname,pwd= base64.b64decode(auth[1]).decode().split(':')
+        user = User.objects.create_user(uname,uname,pwd)
+        user.save()
+        logger.error(user)
     return JsonResponse({'msg':'Gotchu'})
+
+@csrf_exempt
+def handle_registration(request):
+    pass
