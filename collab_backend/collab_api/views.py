@@ -192,13 +192,14 @@ def handle_login(request):
         logger.error(token)
         return Response({'tokens': [{'type': 'access', 'value': token.key}], 'user': {'id': user.pk, 'username': user.username}}, status=HTTP_200_OK)
 
-
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes((AllowAny,))
+def arb_api_call(request):
+    logger.error(request.META['HTTP_AUTHORIZATION'])
+    return Response({'message': 'success'}, status=HTTP_200_OK)
+    
 @csrf_exempt
 def handle_registration(request):
     pass
 
-
-@csrf_exempt
-@api_view(["GET"])
-def arb_api_call(request):
-    return Response({'message': 'success'}, status=HTTP_200_OK)

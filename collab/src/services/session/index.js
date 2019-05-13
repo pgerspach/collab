@@ -40,7 +40,7 @@ const onRequestFailed = exception => {
 };
 export const accessToken = () => {
   const session = selectors.get();
-  if (!session.tokens.access.value || !session.user.id) return Promise.reject();
+  if (!session.tokens.access.value || !session.user.id) return Promise.reject('NOPE');
 
   return api
     .checkAccess(session.tokens.access, session.user)

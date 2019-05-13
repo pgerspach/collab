@@ -7,6 +7,7 @@ import * as session from "./services/session";
 import * as api from "./services/api";
 import store from "./store.js";
 import { createStackNavigator, createAppContainer } from "react-navigation";
+import * as sessionActions from "./services/session/actions";
 
 export default class App extends Component {
   constructor(props) {
@@ -18,10 +19,16 @@ export default class App extends Component {
   componentDidMount() {
     // Waits for the redux store to be populated with the previously saved state,
     // then it will try to auto-login the user.
-    console.log(store.getState());
     const unsubscribe = store.subscribe(() => {
+      console.log(store.getState());
       if (store.getState().services.persist.isHydrated) {
+        console.log("store", store);
         unsubscribe();
+        store.dispatch(
+          sessionActions.update(
+            store.getState().services.persist.services.session
+          )
+        );
         this.autoLogin();
       }
     });
@@ -31,10 +38,11 @@ export default class App extends Component {
     session
       .accessToken()
       .then(() => {
-        this.setState({ initialRoute: 'Home' });
+        this.setState({ initialRoute: "Home" });
       })
-      .catch(() => {
-        this.setState({ initialRoute: 'Login' });
+      .catch(err => {
+        console.log(err);
+        this.setState({ initialRoute: "Login" });
       });
   }
   renderContent(initialRoute) {

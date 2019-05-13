@@ -17,9 +17,11 @@ export const initialState = {
 };
 
 export const reducer = (state = initialState, action) => {
+  console.log('action: ',action);
   switch (action.type) {
     case actionTypes.UPDATE:
       return {
+        ...state,
         ...action.session
       };
     default:

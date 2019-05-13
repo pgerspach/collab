@@ -1,4 +1,5 @@
 import React, { Component } from "react";
+import { connect } from "react-redux";
 import {
   Platform,
   StyleSheet,
@@ -11,6 +12,10 @@ import {
 import { Header, Card, ListItem, Button, Icon } from "react-native-elements";
 import AudioRecorderPlayer from "react-native-audio-recorder-player";
 import Sound from "react-native-sound";
+import { bindActionCreators } from 'redux';
+import * as session from 'collab/src/services/session';
+import * as usersActionCreators from 'collab/src/data/users/actions';
+import * as usersSelectors from 'collab/src/data/users/selectors';
 Sound.setCategory("Playback");
 console.log(Sound.LIBRARY);
 import RNFS from "react-native-fs";
@@ -68,9 +73,9 @@ const styles = StyleSheet.create({
   }
 });
 
-export default class Home extends Component {
-  constructor() {
-    super();
+class Home extends Component {
+  constructor(props) {
+    super(props);
     this.state = {
       recordSecs: null,
       recordTime: "0:00",
@@ -89,6 +94,8 @@ export default class Home extends Component {
     this.audioRecorderPlayer = new AudioRecorderPlayer();
   }
   componentDidMount() {
+    console.log(this.props);
+
     RNFetchBlob.session("temp-session").dispose();
   }
   onStartRecord = async () => {
@@ -422,3 +429,14 @@ export default class Home extends Component {
     );
   }
 }
+export default connect(state => ({
+	data: {
+		users: state.data.users,
+	},
+	services: state.services,
+
+}), dispatch => ({
+	actions: {
+		users: bindActionCreators(usersActionCreators, dispatch),
+	},
+}))(Home);

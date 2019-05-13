@@ -1,4 +1,4 @@
-import { AsyncStorage } from "react-native";
+import AsyncStorage from '@react-native-community/async-storage';
 import { createStore, combineReducers, compose, applyMiddleware } from "redux";
 import thunk from "redux-thunk";
 import devTools from "remote-redux-devtools";
@@ -7,7 +7,7 @@ import createFilter from "redux-persist-transform-filter";
 
 import { reducer as dataReducer } from "./data/reducer";
 import { reducer as servicesReducer } from "./services/reducer";
-import * as persistActionCreators from "./services/persist/actions";
+import * as persistActions from "./services/persist/actions";
 
 const appReducer = combineReducers({
   services: servicesReducer,
@@ -24,7 +24,6 @@ const store = createStore(appReducer, enhancer);
 
 const saveAndLoadSessionFilter = createFilter(
   "services",
-  ["session"],
   ["session"]
 );
 
@@ -35,7 +34,7 @@ export const persist = persistStore(
     blacklist: ["data"],
     transforms: [saveAndLoadSessionFilter]
   },
-  () => store.dispatch(persistActionCreators.update({ isHydrated: true }))
+  () => store.dispatch(persistActions.update({ isHydrated: true }))
 );
 
 export default store;

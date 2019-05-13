@@ -7,7 +7,7 @@ const endPoints = {
   revoke: "/users/auth/revoke",
   refresh: "/users/auth/refresh",
   create: "/users/auth/create",
-  checkAccess:"/users/ping"
+  checkAccess: "/users/ping"
 };
 
 export const authenticate = (email, password) =>
@@ -20,8 +20,8 @@ export const authenticate = (email, password) =>
 export const revoke = tokens => fetchApi(endPoints.revoke, { tokens }, "post");
 
 export const checkAccess = (token, user) =>
-  fetchApi(endPoints.checkAccess, { token, user }, "post", {
-    Authorization: `Token ${accessToken}`
+  fetchApi(endPoints.checkAccess, {}, "post", {
+    Authorization: `Token ${new Buffer(`${token}`).toString("base64")}`
   });
 // export const refresh = (token, user) => fetchApi(endPoints.refresh, { token, user }, 'post', {  // Not using refresh tokens
 // 	'Client-ID': apiConfig.clientId,
