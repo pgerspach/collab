@@ -12,14 +12,15 @@ import {
 import { Header, Card, ListItem, Button, Icon } from "react-native-elements";
 import AudioRecorderPlayer from "react-native-audio-recorder-player";
 import Sound from "react-native-sound";
-import { bindActionCreators } from 'redux';
-import * as session from 'collab/src/services/session';
-import * as usersActionCreators from 'collab/src/data/users/actions';
-import * as usersSelectors from 'collab/src/data/users/selectors';
+import { bindActionCreators } from "redux";
+import * as session from "collab/src/services/session";
+import * as usersActionCreators from "collab/src/data/users/actions";
+import * as usersSelectors from "collab/src/data/users/selectors";
 Sound.setCategory("Playback");
 console.log(Sound.LIBRARY);
 import RNFS from "react-native-fs";
 import RNFetchBlob from "react-native-fetch-blob";
+import {fetchApi} from "../../services/api";
 const base_path = "http://127.0.0.1:8000";
 
 const styles = StyleSheet.create({
@@ -180,6 +181,10 @@ class Home extends Component {
     var xhr = new XMLHttpRequest();
     xhr.open("POST", base_path + "/song/save/");
     xhr.setRequestHeader("enctype", "multipart/form-data");
+    xhr.setRequestHeader(
+      "Authorization",
+      `Token ${this.props.services.session.tokens.access.value}`
+    );
     xhr.onload = function(e) {
       if (xhr.readyState === 4) {
         if (xhr.status === 200) {
@@ -203,19 +208,17 @@ class Home extends Component {
     this.currentSound.pause();
   };
 
-  onGetSongs = async () => {
+  onGetSongs = () => {
     try {
-      response = await fetch(base_path + "/song/get/");
-      response = await response.json();
-      console.log(response);
-      this.setState({ mySongs: response });
+      fetchApi("/song/get/").then(response => {
+        this.setState({ mySongs: response.songs });
+      });
     } catch (error) {
       console.log(error);
     }
   };
   onSelectSong = async (id, e) => {
-    response = await fetch(base_path + "/song/load/" + id.toString());
-    response = await response.json();
+    response = await fetchApi("/song/load/" + id.toString());
     if (response.status === 404) {
       console.log("Something went wrong");
       return;
@@ -259,13 +262,11 @@ class Home extends Component {
     );
   };
   onDeleteSong = async (id, e) => {
-    response = await fetch(base_path + "/song/delete/" + id.toString());
-    response = await response.json();
+    response = await fetchApi("/song/delete/" + id.toString());
     console.log(response.msg);
   };
   onAnalyzeSong = async (id, e) => {
-    response = await fetch(base_path + "/song/analyze/" + id.toString());
-    response = await response.json();
+    response = await fetchApi("/song/analyze/" + id.toString());
     this.setState({
       song_analysis: {
         tempo: response.tempo,
@@ -429,14 +430,16 @@ class Home extends Component {
     );
   }
 }
-export default connect(state => ({
-	data: {
-		users: state.data.users,
-	},
-	services: state.services,
-
-}), dispatch => ({
-	actions: {
-		users: bindActionCreators(usersActionCreators, dispatch),
-	},
-}))(Home);
+export default connect(
+  state => ({
+    data: {
+      users: state.data.users
+    },
+    services: state.services
+  }),
+  dispatch => ({
+    actions: {
+      users: bindActionCreators(usersActionCreators, dispatch)
+    }
+  })
+)(Home);

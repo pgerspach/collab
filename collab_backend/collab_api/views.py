@@ -8,6 +8,8 @@ from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
+from rest_framework.renderers import JSONRenderer
+
 from rest_framework.status import (
     HTTP_400_BAD_REQUEST,
     HTTP_404_NOT_FOUND,
@@ -30,33 +32,32 @@ logger = logging.getLogger(__name__)
 s3 = boto3.resource('s3')
 s3_client = boto3.client('s3', config=Config(signature_version='s3v4'))
 @csrf_exempt
+@api_view(["POST"])
 def save_songs(request):
-    if request.method == 'GET':
-        # songs = list(Songs.objects.filter(song=song_id).values())
-        # Always return an HttpResponseRedirect after successfully dealing
-        # with POST data. This prevents data from being posted twice if a
-        # user hits the Back button.
-        return JsonResponse({"song": "everlong"}, safe=False)
     if request.method == 'POST':
         for bucket in s3.buckets.all():
             bname = bucket.name
         if request.FILES['song']:
             (os_file, track_path) = tempfile.mkstemp(suffix='.wav')
+            sent_token = request.META['HTTP_AUTHORIZATION'].split()[1]
+            token_obj = Token.objects.get(pk=sent_token)
+            logger.error(token_obj.user)
             track = AudioSegment.from_file(request.FILES['song'], 'm4a').export(
                 track_path, format='wav')  # convert to wav temp file
             logger.error(track_path)
-
             # open newly converted wav temporary file
+            # user =  User.objects.get(pk = request)
             wav_song = open(track_path, 'rb')
-            song_record = Song.create(user="user1", name="song1")
+            os.remove(track_path)
+            song_record = Song(user=token_obj.user, name="song1")
+            song_record.save()
             logger.error(song_record)
             s3.Bucket(bucket.name).put_object(
                 Key=str(song_record.id)+'.wav', Body=wav_song)
-            os.remove(track_path)
-            return JsonResponse({"msg": "guud"}, safe=False)
+            return Response({'message': 'success'}, status=HTTP_200_OK)
         else:
-            return JsonResponse({"msg": "not guud"}, safe=False)
-    return HttpResponse(404)
+            return Response({'message': 'failure'}, status=HTTP_200_OK)
+    return Response({'message': 'failure'}, status=HTTP_400_BAD_REQUEST)
 
 
 def get_songs(request):
@@ -67,19 +68,17 @@ def get_songs(request):
         # user hits the Back button.
         all_songs = list(Song.objects.all().values())
         logger.error(all_songs)
-        return JsonResponse(all_songs, safe=False)
-
+        response = Response(
+            {'songs': all_songs}, content_type="application/json", status=HTTP_200_OK)
+        response.accepted_renderer = JSONRenderer()
+        response.accepted_media_type = "application/json"
+        response.renderer_context = {}
+        return response
     else:
         return HttpResponse(404)
 
-
+@api_view(["GET"])
 def load_song(request, song_id):
-    if request.method == 'POST':
-        # songs = list(Songs.objects.filter(song=song_id).values())
-        # Always return an HttpResponseRedirect after successfully dealing
-        # with POST data. This prevents data from being posted twice if a
-        # user hits the Back button.
-        return HttpResponse(404)
     bucket_name = 'collab-song-storage'
     song = Song.objects.get(pk=song_id)
     key = str(song.id)+'.wav'
@@ -92,16 +91,10 @@ def load_song(request, song_id):
             'Key': key
         }
     )
-    return JsonResponse({"url": url})
+    return Response({"url": url})
 
-
+@api_view(["GET"])
 def delete_song(request, song_id):
-    if request.method == 'POST':
-        # songs = list(Songs.objects.filter(song=song_id).values())
-        # Always return an HttpResponseRedirect after successfully dealing
-        # with POST data. This prevents data from being posted twice if a
-        # user hits the Back button.
-        return HttpResponse(404)
     bucket_name = 'collab-song-storage'
     song = Song.objects.get(pk=song_id)
     key = str(song.id)+'.wav'
@@ -112,17 +105,10 @@ def delete_song(request, song_id):
         Bucket='collab-song-storage',
         Key=key
     )
-    return JsonResponse({"msg": "File deleted"})
+    return Response({"msg": "File deleted"})
 
-
+@api_view(["GET"])
 def analyze_song(request, song_id):
-
-    if request.method == 'POST':
-        # songs = list(Songs.objects.filter(song=song_id).values())
-        # Always return an HttpResponseRedirect after successfully dealing
-        # with POST data. This prevents data from being posted twice if a
-        # user hits the Back button.
-        return HttpResponse(404)
     (os_file, track_path) = tempfile.mkstemp(suffix='.wav')
     bucket_name = 'collab-song-storage'
     song = Song.objects.get(pk=song_id)
@@ -175,7 +161,7 @@ def analyze_song(request, song_id):
         sums.pop(max_m)
     most_common_freq = [sum(pitches[max_index])/len(pitches[max_index])
                         for max_index in max_indices]
-    return JsonResponse({"msg": "Completed analyze song", "tempo": list(map(lambda x: round(x, 2), tempo)), 'common_frequencies': list(map(lambda x: round(x, 2), most_common_freq))})
+    return Response({"msg": "Completed analyze song", "tempo": list(map(lambda x: round(x, 2), tempo)), 'common_frequencies': list(map(lambda x: round(x, 2), most_common_freq))})
 
 
 @csrf_exempt
@@ -192,14 +178,18 @@ def handle_login(request):
         logger.error(token)
         return Response({'tokens': [{'type': 'access', 'value': token.key}], 'user': {'id': user.pk, 'username': user.username}}, status=HTTP_200_OK)
 
+
 @csrf_exempt
 @api_view(["POST"])
 @permission_classes((AllowAny,))
 def arb_api_call(request):
-    logger.error(request.META['HTTP_AUTHORIZATION'])
+    sent_token = request.META['HTTP_AUTHORIZATION'].split()[1]
+    logger.error(sent_token)
+    token_obj = Token.objects.get(pk=sent_token)
+    logger.error(token_obj.user.id)
     return Response({'message': 'success'}, status=HTTP_200_OK)
-    
+
+
 @csrf_exempt
 def handle_registration(request):
     pass
-

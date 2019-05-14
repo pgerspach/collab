@@ -10,6 +10,7 @@ export const fetchApi = (
   headers = {}
 ) => {
   const accessToken = sessionSelectors.get().tokens.access.value;
+  console.log(endPoint);
   return fetchival(`${apiConfig.url}${endPoint}`, {
     headers: _.pickBy(
       {

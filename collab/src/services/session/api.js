@@ -20,9 +20,7 @@ export const authenticate = (email, password) =>
 export const revoke = tokens => fetchApi(endPoints.revoke, { tokens }, "post");
 
 export const checkAccess = (token, user) =>
-  fetchApi(endPoints.checkAccess, {}, "post", {
-    Authorization: `Token ${new Buffer(`${token}`).toString("base64")}`
-  });
+  fetchApi(endPoints.checkAccess, {}, "post");
 // export const refresh = (token, user) => fetchApi(endPoints.refresh, { token, user }, 'post', {  // Not using refresh tokens
 // 	'Client-ID': apiConfig.clientId,
 // 	Authorization: null,
