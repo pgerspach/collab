@@ -9,7 +9,14 @@ import {
   FlatList,
   ScrollView
 } from "react-native";
-import { Header, Card, ListItem, Button, Icon } from "react-native-elements";
+import {
+  Header,
+  Card,
+  ListItem,
+  Button,
+  Icon,
+  Overlay
+} from "react-native-elements";
 import AudioRecorderPlayer from "react-native-audio-recorder-player";
 import Sound from "react-native-sound";
 import { bindActionCreators } from "redux";
@@ -20,7 +27,7 @@ Sound.setCategory("Playback");
 console.log(Sound.LIBRARY);
 import RNFS from "react-native-fs";
 import RNFetchBlob from "react-native-fetch-blob";
-import {fetchApi} from "../../services/api";
+import { fetchApi } from "../../services/api";
 const base_path = "http://127.0.0.1:8000";
 
 const styles = StyleSheet.create({
@@ -71,6 +78,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "space-evenly",
     alignItems: "stretch"
+  },
+  overlay: {
+    backgroundColor: "#000"
+  },
+  overlayText: {
+    color: "#fff"
   }
 });
 
@@ -89,7 +102,8 @@ class Home extends Component {
       uploadPath: "",
       playing: false,
       song_analysis: null,
-      recording: false
+      recording: false,
+      logOutVisible: false
     };
     this.currentSound = null;
     this.audioRecorderPlayer = new AudioRecorderPlayer();
@@ -310,8 +324,31 @@ class Home extends Component {
           }}
           leftComponent={{ icon: "menu", color: "#fff" }}
           centerComponent={{ text: "Collab", style: { color: "#fff" } }}
-          rightComponent={{ icon: "home", color: "#fff" }}
+          rightComponent={
+            <Button
+              onPress={() => this.setState({ logOutVisible: true })}
+              type="clear"
+              icon={<Icon name="home" color="#fff" />}
+            />
+          }
         />
+        <Overlay
+          isVisible={this.state.logOutVisible}
+          windowBackgroundColor="rgba(255, 255, 255, .5)"
+          overlayBackgroundColor="rgb(0, 0, 0)"
+          overlayStyle={styles.overlay}
+          width="auto"
+          height="auto"
+          onBackdropPress={() => this.setState({ logOutVisible: false })}
+        >
+          <View >
+            <Text style={styles.overlayText}>
+              Are you sure you want to log out?
+            </Text>
+            <Button title={"Yes"}style={styles.button}onPress={() => this.setState({ logOutVisible: false })} />
+            <Button title={"No"}style={styles.button}onPress={() => this.setState({ logOutVisible: false })} />
+          </View>
+        </Overlay>
         <ScrollView>
           <View style={styles.twoCardContainer}>
             <Card

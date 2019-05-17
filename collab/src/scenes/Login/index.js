@@ -24,24 +24,26 @@ export default class Login extends Component {
     this.state = this.initialState;
   }
   componentDidMount() {
-    this.logIn();
   }
   logIn() {
     session
       .authenticate(this.state.username, this.state.password)
       .then(() => {
         this.setState(this.initialState);
-        this.props.navigation.navigate('Home')
+        this.props.navigation.navigate("Home");
       })
       .catch(err => {
         console.log(err);
       });
   }
-  render(){
-      return(<View>
-          <Text>
-              Logging in
-          </Text>
-      </View>)
+  render() {
+    return (
+      <View>
+        <Button
+          icon={<Icon type="material" name="check_circle" />}
+          onPress={this.logIn}
+        />
+      </View>
+    );
   }
 }
