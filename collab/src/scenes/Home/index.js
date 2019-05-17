@@ -28,6 +28,8 @@ console.log(Sound.LIBRARY);
 import RNFS from "react-native-fs";
 import RNFetchBlob from "react-native-fetch-blob";
 import { fetchApi } from "../../services/api";
+import * as sessionApi from "../../services/session";
+
 const base_path = "http://127.0.0.1:8000";
 
 const styles = StyleSheet.create({
@@ -305,6 +307,9 @@ class Home extends Component {
       (ms < 10 ? "0" + ms : ms)
     );
   }
+  logOut(){
+    sessionApi.revoke();
+  }
   componentWillUnmount() {
     if (this.state.recordingFileLocation.length > 0) {
       const path =
@@ -345,7 +350,7 @@ class Home extends Component {
             <Text style={styles.overlayText}>
               Are you sure you want to log out?
             </Text>
-            <Button title={"Yes"}style={styles.button}onPress={() => this.setState({ logOutVisible: false })} />
+            <Button title={"Yes"}style={styles.button}onPress={this.logOut} />
             <Button title={"No"}style={styles.button}onPress={() => this.setState({ logOutVisible: false })} />
           </View>
         </Overlay>

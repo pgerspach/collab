@@ -12,6 +12,7 @@ urlpatterns = [
     path('song/delete/<int:song_id>', views.delete_song, name='song'),
     path('song/analyze/<int:song_id>', views.analyze_song, name='song'),
     path('users/auth', views.handle_login, name="auth"),
-    path('users/ping',views.arb_api_call,name='arbitrary'),
-    path('users/create',views.handle_registration,name="create_user")
+    path('users/ping', views.arb_api_call, name='arbitrary'),
+    path('users/create', views.handle_registration, name="create_user"),
+    path('users/auth/revoke', views.log_out, name="delete_token")
 ]

@@ -22,8 +22,10 @@ export default class Login extends Component {
       password: "password"
     };
     this.state = this.initialState;
+    this.logIn = this.logIn.bind(this);
   }
   componentDidMount() {
+    // this.logIn()
   }
   logIn() {
     session
@@ -40,7 +42,7 @@ export default class Login extends Component {
     return (
       <View>
         <Button
-          icon={<Icon type="material" name="check_circle" />}
+          icon={<Icon type="material" name="home" />}
           onPress={this.logIn}
         />
       </View>

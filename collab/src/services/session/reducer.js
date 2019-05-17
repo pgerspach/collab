@@ -6,10 +6,6 @@ export const initialState = {
       type: null,
       value: null
     }
-    // refresh: { // not using refresh tokens
-    // 	type: null,
-    // 	value: null,
-    // },
   },
   user: {
     id: null

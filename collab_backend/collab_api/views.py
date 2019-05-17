@@ -163,6 +163,13 @@ def analyze_song(request, song_id):
                         for max_index in max_indices]
     return Response({"msg": "Completed analyze song", "tempo": list(map(lambda x: round(x, 2), tempo)), 'common_frequencies': list(map(lambda x: round(x, 2), most_common_freq))})
 
+@csrf_exempt
+@api_view(["POST"])
+def log_out(request):
+    sent_token = request.META['HTTP_AUTHORIZATION'].split()[1]
+    Token.objects.filter(pk=sent_token).delete()
+    return Response(status=HTTP_200_OK)
+
 
 @csrf_exempt
 @api_view(["POST"])
