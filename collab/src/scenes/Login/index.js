@@ -58,12 +58,15 @@ export default class Login extends Component {
         this.props.navigation.navigate("Home");
       })
       .catch(err => {
-        console.log(err);
+        this.setState({passwordError:"Incorrect email/password"})
+        let to = setTimeout(() => {
+          this.setState({passwordError:null})
+        }, 2000);
       });
   }
   render() {
     return (
-      <View style={{ flex: 1, flexDirection: "column", alignItems: "center" }}>
+      <View style={{ flex: 1, flexDirection: "column", alignItems: "center" }} keyboardShouldPersistTaps>
         <Input
           containerStyle={styles.inputContainer}
           inputStyle={{...styles.input}}
@@ -73,6 +76,7 @@ export default class Login extends Component {
           autoCapitalize="none"
           value={this.state.username}
           onChangeText={text=>this.setState({username:text})}
+          autoFocus={true}
         />
         <Input
           containerStyle={styles.inputContainer}
@@ -83,9 +87,11 @@ export default class Login extends Component {
           autoCapitalize="none"
           value={this.state.password}
           onChangeText={text=>this.setState({password:text})}
+          errorStyle={{ color: 'red' }}
+          errorMessage={this.state.passwordError}
         />
         <Button
-          icon={<Icon type="material" name="home" />}
+          title="Log in"
           onPress={this.logIn}
           style={styles.logInButton}
         />

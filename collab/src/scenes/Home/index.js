@@ -109,6 +109,7 @@ class Home extends Component {
     };
     this.currentSound = null;
     this.audioRecorderPlayer = new AudioRecorderPlayer();
+    this.logOut = this.logOut.bind(this);
   }
   componentDidMount() {
     console.log(this.props);
@@ -308,7 +309,10 @@ class Home extends Component {
     );
   }
   logOut(){
-    sessionApi.revoke();
+    sessionApi.revoke().then(()=>{
+      console.log(this.props);
+      this.props.navigation.navigate("Login");
+    });
   }
   componentWillUnmount() {
     if (this.state.recordingFileLocation.length > 0) {
