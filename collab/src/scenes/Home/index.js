@@ -311,7 +311,7 @@ class Home extends Component {
   logOut(){
     sessionApi.revoke().then(()=>{
       console.log(this.props);
-      this.props.navigation.navigate("Login");
+      this.props.navigation.replace("Login");
     });
   }
   componentWillUnmount() {

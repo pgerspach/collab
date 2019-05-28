@@ -56,7 +56,12 @@ export default class App extends Component {
     const mainNavigator = createStackNavigator(
       {
         Login: Login,
-        Home: Home
+        Home: {
+          screen: Home,
+          navigationOptions: () => ({
+            header: null
+          })
+        }
       },
       {
         initialRouteName: initialRoute

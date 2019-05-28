@@ -55,7 +55,7 @@ export default class Login extends Component {
       .authenticate(this.state.username, this.state.password)
       .then(() => {
         this.setState(this.initialState);
-        this.props.navigation.navigate("Home");
+        this.props.navigation.replace("Home");
       })
       .catch(err => {
         this.setState({passwordError:"Incorrect email/password"})
