@@ -105,7 +105,8 @@ class Home extends Component {
       playing: false,
       song_analysis: null,
       recording: false,
-      logOutVisible: false
+      logOutVisible: false,
+      playDisabled:false
     };
     this.currentSound = null;
     this.audioRecorderPlayer = new AudioRecorderPlayer();
@@ -235,6 +236,7 @@ class Home extends Component {
     }
   };
   onSelectSong = async (id, e) => {
+    this.setState({playDisabled:true});
     response = await fetchApi("/song/load/" + id.toString());
     if (response.status === 404) {
       console.log("Something went wrong");
@@ -275,6 +277,7 @@ class Home extends Component {
       },
       () => {
         this.loadSound();
+        this.setState({playDisabled:false});
       }
     );
   };
@@ -407,6 +410,7 @@ class Home extends Component {
                   />
                 }
                 onPress={this.state.playing ? this.pauseSound : this.playSound}
+                disabled={this.state.playDisabled}
               />
               <Button
                 style={styles.button}

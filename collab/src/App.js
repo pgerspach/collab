@@ -55,7 +55,12 @@ export default class App extends Component {
     }
     const mainNavigator = createStackNavigator(
       {
-        Login: Login,
+        Login: {
+          screen: Login,
+          navigationOptions: () => ({
+            title: "Welcome to Collab"
+          })
+        },
         Home: {
           screen: Home,
           navigationOptions: () => ({
