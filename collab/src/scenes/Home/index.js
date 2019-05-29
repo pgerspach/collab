@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flex: 1,
-    backgroundColor: "#000"
+    backgroundColor: "#000",
   },
   buttonContainer: {
     flexDirection: "row",
@@ -342,12 +342,14 @@ class Home extends Component {
             justifyContent: "space-between"
           }}
           leftComponent={{ icon: "menu", color: "#fff" }}
-          centerComponent={{ text: "Collab", style: { color: "#fff" } }}
+          centerComponent={{ text: "Collab", style: { color: "#fff",fontSize:20 } }}
           rightComponent={
             <Button
               onPress={() => this.setState({ logOutVisible: true })}
               type="clear"
-              icon={<Icon name="home" color="#fff" />}
+              // icon={<Icon name="home" color="#fff" />}
+              title="Log out"
+              titleStyle={{fontSize:15}}
             />
           }
         />
@@ -360,11 +362,11 @@ class Home extends Component {
           height="auto"
           onBackdropPress={() => this.setState({ logOutVisible: false })}
         >
-          <View>
+          <View style={{alignItems:"center"}}>
             <Text style={styles.overlayText}>
               Are you sure you want to log out?
             </Text>
-            <Button title={"Yes"} style={styles.button} onPress={this.logOut} />
+            <Button title={"Yes"} style={{...styles.button,marginTop:8}} onPress={this.logOut} />
             <Button
               title={"No"}
               style={styles.button}
