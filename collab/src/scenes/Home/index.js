@@ -93,10 +93,7 @@ class Home extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      recordSecs: null,
       recordTime: "0:00",
-      currentPositionSec: null,
-      currentDurationSec: null,
       playTime: 0,
       duration: null,
       recordingFileLocation: "",
@@ -106,7 +103,7 @@ class Home extends Component {
       song_analysis: null,
       recording: false,
       logOutVisible: false,
-      playDisabled:false
+      playDisabled: false
     };
     this.currentSound = null;
     this.audioRecorderPlayer = new AudioRecorderPlayer();
@@ -121,7 +118,6 @@ class Home extends Component {
     const result = await this.audioRecorderPlayer.startRecorder();
     this.audioRecorderPlayer.addRecordBackListener(e => {
       this.setState({
-        recordSecs: e.current_position,
         recordTime: this.audioRecorderPlayer.mmssss(
           Math.floor(e.current_position)
         )
@@ -140,7 +136,6 @@ class Home extends Component {
     const result = await this.audioRecorderPlayer.stopRecorder();
     this.audioRecorderPlayer.removeRecordBackListener();
     this.setState({
-      recordSecs: 0,
       recording: false
     });
     this.loadSound();
@@ -158,31 +153,6 @@ class Home extends Component {
         return;
       }
     }
-  };
-  playSound = async () => {
-    this.setState({ playing: true });
-    console.log(
-      "duration in seconds: " +
-        this.currentSound.getDuration() +
-        " number of channels: " +
-        this.currentSound.getNumberOfChannels()
-    );
-
-    // Play the sound with an onEnd callback
-    this.currentPlayTimeInterval = setInterval(() => {
-      this.currentSound.getCurrentTime(seconds => {
-        this.setState({ playTime: seconds });
-        return;
-      });
-    }, 100);
-    this.currentSound.play(success => {
-      if (success) {
-        this.setState({ playTime: 0, playing: false });
-        clearInterval(this.currentPlayTimeInterval);
-      } else {
-        console.log("playback failed due to audio decoding errors");
-      }
-    });
   };
   onFileSave = async () => {
     const song = {
@@ -219,13 +189,50 @@ class Home extends Component {
     };
     xhr.send(body);
   };
+  playSound = async () => {
+    this.setState({ playing: true });
+    console.log(
+      "duration in seconds: " +
+        this.currentSound.getDuration() +
+        " number of channels: " +
+        this.currentSound.getNumberOfChannels()
+    );
 
+    // Play the sound with an onEnd callback
+    this.currentPlayTimeInterval = setInterval(() => {
+      this.currentSound.getCurrentTime(seconds => {
+        this.setState({ playTime: seconds });
+        return;
+      });
+    }, 100);
+    this.currentSound.play(success => {
+      if (success) {
+        this.setState({ playTime: 0, playing: false });
+        clearInterval(this.currentPlayTimeInterval);
+      } else {
+        console.log("playback failed due to audio decoding errors");
+      }
+    });
+  };
   pauseSound = async () => {
     this.setState({ playing: false });
     clearInterval(this.currentPlayTimeInterval);
     this.currentSound.pause();
   };
-
+  setBack = async () => {
+    let timeSet = this.state.playTime - 5;
+    timeSet = timeSet < 0 ? 0 : timeSet;
+    this.setState({playTime:timeSet});
+    this.currentSound.setCurrentTime(timeSet);
+    this.pauseSound();
+  };
+  setForward = async () => {
+    let timeSet = this.state.playTime + 5;
+    timeSet = timeSet >this.currentSound.getDuration() ? 0 : timeSet;
+    this.setState({playTime:timeSet});
+    this.currentSound.setCurrentTime(timeSet);
+    this.pauseSound();
+  };
   onGetSongs = () => {
     try {
       fetchApi("/song/get/").then(response => {
@@ -236,7 +243,7 @@ class Home extends Component {
     }
   };
   onSelectSong = async (id, e) => {
-    this.setState({playDisabled:true});
+    this.setState({ playDisabled: true });
     response = await fetchApi("/song/load/" + id.toString());
     if (response.status === 404) {
       console.log("Something went wrong");
@@ -277,7 +284,7 @@ class Home extends Component {
       },
       () => {
         this.loadSound();
-        this.setState({playDisabled:false});
+        this.setState({ playDisabled: false });
       }
     );
   };
@@ -311,8 +318,8 @@ class Home extends Component {
       (ms < 10 ? "0" + ms : ms)
     );
   }
-  logOut(){
-    sessionApi.revoke().then(()=>{
+  logOut() {
+    sessionApi.revoke().then(() => {
       console.log(this.props);
       this.props.navigation.replace("Login");
     });
@@ -353,12 +360,16 @@ class Home extends Component {
           height="auto"
           onBackdropPress={() => this.setState({ logOutVisible: false })}
         >
-          <View >
+          <View>
             <Text style={styles.overlayText}>
               Are you sure you want to log out?
             </Text>
-            <Button title={"Yes"}style={styles.button}onPress={this.logOut} />
-            <Button title={"No"}style={styles.button}onPress={() => this.setState({ logOutVisible: false })} />
+            <Button title={"Yes"} style={styles.button} onPress={this.logOut} />
+            <Button
+              title={"No"}
+              style={styles.button}
+              onPress={() => this.setState({ logOutVisible: false })}
+            />
           </View>
         </Overlay>
         <ScrollView>
@@ -399,7 +410,8 @@ class Home extends Component {
             <View style={styles.buttonContainer}>
               <Button
                 style={styles.button}
-                icon={<Icon type="material" name="replay-10" />}
+                icon={<Icon type="material" name="replay-5" />}
+                onPress = {this.setBack}
               />
               <Button
                 style={styles.button}
@@ -414,7 +426,8 @@ class Home extends Component {
               />
               <Button
                 style={styles.button}
-                icon={<Icon type="material" name="forward-10" />}
+                icon={<Icon type="material" name="forward-5" />}
+                onPress = {this.setForward}
               />
             </View>
           </Card>
@@ -431,23 +444,24 @@ class Home extends Component {
                 data={this.state.mySongs}
                 renderItem={({ item }) => (
                   <View style={styles.buttonContainer}>
+                    <Text>{item.id}:</Text>
                     <Text
                       onPress={this.onSelectSong.bind(this, item.id)}
                       style={styles.text}
                     >
-                      Load: {item.id}
+                      Load
                     </Text>
                     <Text
                       onPress={this.onDeleteSong.bind(this, item.id)}
                       style={styles.text}
                     >
-                      Delete: {item.id}
+                      Delete
                     </Text>
                     <Text
                       onPress={this.onAnalyzeSong.bind(this, item.id)}
                       style={styles.text}
                     >
-                      Analyze: {item.id}
+                      Analyze
                     </Text>
                   </View>
                 )}
